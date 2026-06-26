@@ -109,7 +109,7 @@ func NewDefaultSimulation() *Simulation {
 }
 
 func (s *Simulation) Snapshot() Snapshot {
-	stations := slices.Clone(s.stations)
+	stations := cloneStationsForSnapshot(s.stations)
 	segments := slices.Clone(s.segments)
 	weather := s.currentWeather()
 
@@ -291,4 +291,17 @@ func (s *Simulation) updateSegments(weather WeatherState) {
 
 func round2(value float64) float64 {
 	return math.Round(value*100) / 100
+}
+
+func cloneStationsForSnapshot(stations []Station) []Station {
+	cloned := slices.Clone(stations)
+	for index := range cloned {
+		cloned[index].Health = round2(cloned[index].Health)
+		cloned[index].MaintenanceDebt = round2(cloned[index].MaintenanceDebt)
+		cloned[index].PumpCapacity = round2(cloned[index].PumpCapacity)
+		cloned[index].LoadFactor = round2(cloned[index].LoadFactor)
+		cloned[index].LightningExposure = round2(cloned[index].LightningExposure)
+	}
+
+	return cloned
 }
