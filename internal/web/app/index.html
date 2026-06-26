@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Oil Worker</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>Oil Worker</h1>
+          <p id="scenario-briefing" class="muted">
+            Загрузка сценария...
+          </p>
+        </div>
+        <div class="toolbar">
+          <button id="refresh-button">Обновить</button>
+          <button id="tick-1-button">+1 час</button>
+          <button id="tick-6-button">+6 часов</button>
+          <button id="reset-button" class="danger">Перезапуск смены</button>
+        </div>
+      </header>
+
+      <section class="summary-grid">
+        <article class="metric-card">
+          <span class="label">Перекачано</span>
+          <strong id="metric-total-pumped">0</strong>
+          <span id="metric-plan-progress" class="subtle"></span>
+        </article>
+        <article class="metric-card">
+          <span class="label">Текущий час</span>
+          <strong id="metric-hourly-throughput">0</strong>
+          <span id="metric-hourly-target" class="subtle"></span>
+        </article>
+        <article class="metric-card">
+          <span class="label">Надежность</span>
+          <strong id="metric-reliability">0</strong>
+          <span id="metric-service-quality" class="subtle"></span>
+        </article>
+        <article class="metric-card">
+          <span class="label">Финансовый результат</span>
+          <strong id="metric-balance">0</strong>
+          <span id="metric-score" class="subtle"></span>
+        </article>
+      </section>
+
+      <main class="layout">
+        <section class="panel map-panel">
+          <div class="panel-header">
+            <h2>Карта нефтепроводов</h2>
+            <span id="weather-banner" class="weather-badge">Погода</span>
+          </div>
+
+          <div class="map-wrap">
+            <svg class="network-svg" viewBox="0 0 760 420" aria-hidden="true">
+              <line id="seg-north-central-line" x1="150" y1="85" x2="370" y2="180"></line>
+              <line id="seg-west-central-line" x1="120" y1="260" x2="370" y2="180"></line>
+              <line id="seg-central-east-line" x1="370" y1="180" x2="650" y2="145"></line>
+              <line id="seg-central-south-line" x1="370" y1="180" x2="535" y2="330"></line>
+              <line id="seg-south-east-line" x1="535" y1="330" x2="650" y2="145"></line>
+            </svg>
+
+            <button class="station-node" id="station-nps-north-intake" style="left: 120px; top: 50px">
+              <span>North Intake</span>
+            </button>
+            <button class="station-node" id="station-nps-west-booster" style="left: 90px; top: 225px">
+              <span>West Booster</span>
+            </button>
+            <button class="station-node" id="station-nps-central-hub" style="left: 340px; top: 145px">
+              <span>Central Hub</span>
+            </button>
+            <button class="station-node" id="station-nps-south-loop" style="left: 505px; top: 300px">
+              <span>South Loop</span>
+            </button>
+            <button class="station-node" id="station-nps-east-export" style="left: 620px; top: 110px">
+              <span>East Export</span>
+            </button>
+          </div>
+
+          <div class="two-column">
+            <div>
+              <h3>Сегменты</h3>
+              <div id="segments-list" class="stack"></div>
+            </div>
+            <div>
+              <h3>Прогноз гроз</h3>
+              <div id="forecast-list" class="stack"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel sidebar">
+          <div class="panel-header">
+            <h2 id="station-title">Станция</h2>
+            <span id="station-status-badge" class="status-badge">stable</span>
+          </div>
+
+          <p id="station-summary" class="muted">Выберите станцию на карте.</p>
+
+          <div class="control-group">
+            <label for="load-slider">Загрузка станции</label>
+            <input id="load-slider" type="range" min="55" max="105" step="1" value="78" />
+            <div class="control-row">
+              <span id="load-value">78%</span>
+              <button id="apply-load-button">Применить нагрузку</button>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label for="bypass-slider">Доля обходного южного маршрута</label>
+            <input id="bypass-slider" type="range" min="5" max="55" step="1" value="22" />
+            <div class="control-row">
+              <span id="bypass-value">22%</span>
+              <button id="apply-bypass-button">Применить маршрут</button>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <button id="maintenance-button">ТО станции</button>
+            <button id="reserve-button">Подготовить резерв</button>
+          </div>
+
+          <div>
+            <h3>Оборудование станции</h3>
+            <div id="equipment-list" class="stack"></div>
+          </div>
+
+          <div>
+            <h3>Активные предупреждения</h3>
+            <div id="alerts-list" class="stack"></div>
+          </div>
+
+          <div>
+            <h3>Сценарий и цели</h3>
+            <div id="objectives-list" class="stack"></div>
+          </div>
+
+          <div>
+            <h3>Экономика</h3>
+            <div id="economy-list" class="stack"></div>
+          </div>
+
+          <div>
+            <h3>Журнал событий</h3>
+            <div id="event-log-list" class="stack log-list"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

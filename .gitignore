@@ -1,0 +1,11 @@
+bin/
+dist/
+.DS_Store
+
+# Go
+coverage.out
+
+# Godot
+.godot/
+godot/.godot/
+*.import

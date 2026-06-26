@@ -1,0 +1,269 @@
+:root {
+  color-scheme: dark;
+  --bg: #081018;
+  --panel: #101b25;
+  --panel-2: #152432;
+  --text: #edf4fb;
+  --muted: #a5b5c5;
+  --line: #29465e;
+  --ok: #1fb87a;
+  --warn: #f5b942;
+  --danger: #ef6a6a;
+  --accent: #58a6ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: linear-gradient(180deg, #07111a 0%, #0d1823 100%);
+  color: var(--text);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #163146;
+  color: var(--text);
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1b3b54;
+}
+
+button.danger {
+  background: #4d2226;
+  border-color: #78333a;
+}
+
+.app-shell {
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.topbar,
+.toolbar,
+.control-row,
+.panel-header,
+.summary-grid,
+.two-column {
+  display: flex;
+  gap: 12px;
+}
+
+.topbar,
+.panel-header {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.toolbar {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.summary-grid {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.metric-card,
+.panel {
+  background: rgba(16, 27, 37, 0.94);
+  border: 1px solid rgba(88, 166, 255, 0.14);
+  border-radius: 18px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.24);
+}
+
+.metric-card {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.metric-card strong {
+  font-size: 1.8rem;
+}
+
+.label {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+}
+
+.subtle,
+.muted {
+  color: var(--muted);
+}
+
+.layout {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: minmax(720px, 1.1fr) minmax(360px, 0.75fr);
+  gap: 16px;
+}
+
+.panel {
+  padding: 18px;
+}
+
+.map-wrap {
+  position: relative;
+  margin-top: 12px;
+  height: 420px;
+  border-radius: 16px;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px),
+    radial-gradient(circle at 25% 20%, rgba(88,166,255,0.14), transparent 25%),
+    #0c151d;
+  background-size: 48px 48px, 48px 48px, auto, auto;
+}
+
+.network-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.network-svg line {
+  stroke: #3f77a8;
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.station-node {
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 3px solid #203040;
+  background: #0b7f62;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.station-node.selected {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.15);
+}
+
+.station-node.reserve {
+  background: #d39524;
+}
+
+.station-node.outage {
+  background: #c34a4a;
+}
+
+.station-node.overloaded {
+  background: #e2784c;
+}
+
+.station-node.service,
+.station-node.reserve-ready {
+  background: #2f8fca;
+}
+
+.two-column {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stack-card {
+  border: 1px solid rgba(88, 166, 255, 0.12);
+  background: var(--panel-2);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.stack-card h4,
+.stack-card p {
+  margin: 0;
+}
+
+.stack-card p + p {
+  margin-top: 6px;
+}
+
+.status-badge,
+.weather-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  background: rgba(88, 166, 255, 0.14);
+  color: var(--text);
+}
+
+.status-completed {
+  color: var(--ok);
+}
+
+.status-on-track {
+  color: var(--warn);
+}
+
+.status-at-risk {
+  color: var(--danger);
+}
+
+.control-group {
+  margin-top: 16px;
+}
+
+.control-group label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+}
+
+input[type="range"] {
+  width: 100%;
+}
+
+.log-list {
+  max-height: 240px;
+  overflow: auto;
+}
+
+.empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+@media (max-width: 1180px) {
+  .summary-grid,
+  .layout,
+  .two-column {
+    grid-template-columns: 1fr;
+  }
+}
