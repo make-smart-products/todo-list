@@ -20,6 +20,8 @@ Godot is used for:
 - scenario progression,
 - alerts, audio, and presentation.
 
+The repository now also ships a **browser client** served by the Go backend. This gives the project a fast feedback loop for simulation and UX work even when a local Godot runtime is unavailable.
+
 ## Responsibility split
 
 ### Go layer
@@ -33,6 +35,7 @@ The Go layer owns:
 - throughput calculations,
 - maintenance actions,
 - API contracts for the client.
+- web distribution of the browser client.
 
 ### Godot layer
 
@@ -44,6 +47,15 @@ The Godot layer owns:
 - event log and warnings,
 - camera and UX flow,
 - mission briefings and results screens.
+
+### Browser client layer
+
+The browser client is a practical alternate front end for:
+
+- rapid iteration on dispatch UX,
+- running the game without Godot installed,
+- validating API contracts,
+- supporting future web demos or embedded control-room dashboards.
 
 ## Integration contract
 
@@ -65,6 +77,12 @@ The first integration step uses a local HTTP API.
   - reroutes a larger or smaller percentage of national flow through the southern bypass
 
 This API-first split keeps the domain logic independent from the Godot scene graph and makes the simulation easy to test without the game client.
+
+The same API now powers:
+
+- the Godot prototype,
+- the browser client served from `/`,
+- and command-line/curl verification flows.
 
 ## Why not embed Go directly into Godot
 

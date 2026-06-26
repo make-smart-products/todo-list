@@ -23,6 +23,14 @@ func TestAdvanceIncreasesThroughputAndTracksStormSeason(t *testing.T) {
 	if len(after.EventLog) == 0 {
 		t.Fatal("expected event log entries after advancing the simulation")
 	}
+
+	if len(after.Forecast) != 6 {
+		t.Fatalf("expected six forecast entries, got %d", len(after.Forecast))
+	}
+
+	if after.Economy.Revenue <= 0 {
+		t.Fatalf("expected revenue to grow after advancing, got %.2f", after.Economy.Revenue)
+	}
 }
 
 func TestMaintenanceImprovesStationCondition(t *testing.T) {
@@ -47,6 +55,10 @@ func TestMaintenanceImprovesStationCondition(t *testing.T) {
 
 	if !targetAfter.ReserveReady {
 		t.Fatal("expected maintenance to make reserve power ready")
+	}
+
+	if len(targetAfter.Equipment) == 0 {
+		t.Fatal("expected station equipment details to be present")
 	}
 }
 
@@ -99,6 +111,27 @@ func TestPrepareReserveProtectsSouthLoopDuringStorm(t *testing.T) {
 
 	if !south.ReserveActive {
 		t.Fatal("expected south loop to switch to reserve during southern storm peak")
+	}
+
+	if south.Equipment[2].Status != "active" {
+		t.Fatalf("expected reserve equipment to become active, got %q", south.Equipment[2].Status)
+	}
+}
+
+func TestScenarioObjectivesAndEconomyAreExposed(t *testing.T) {
+	simulation := NewDefaultSimulation()
+
+	snapshot := simulation.Snapshot()
+	if snapshot.Scenario.HoursRemaining != 24 {
+		t.Fatalf("expected 24 hours remaining at start, got %d", snapshot.Scenario.HoursRemaining)
+	}
+
+	if len(snapshot.Scenario.Objectives) != 3 {
+		t.Fatalf("expected three scenario objectives, got %d", len(snapshot.Scenario.Objectives))
+	}
+
+	if snapshot.Economy.DispatchBudget <= 0 {
+		t.Fatalf("expected positive dispatch budget, got %.2f", snapshot.Economy.DispatchBudget)
 	}
 }
 

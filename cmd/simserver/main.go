@@ -17,7 +17,7 @@ func main() {
 
 	server := api.NewServer(sim.NewDefaultSimulation())
 
-	log.Printf("oil-worker simulation API listening on %s", address)
+	log.Printf("oil-worker simulation API listening on %s (browser client at /)", address)
 	if err := http.ListenAndServe(address, server); err != nil {
 		log.Fatal(err)
 	}

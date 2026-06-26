@@ -3,10 +3,12 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"net/http"
 	"sync"
 
 	"github.com/make-smart-products/todo-list/internal/sim"
+	"github.com/make-smart-products/todo-list/internal/web"
 )
 
 type Server struct {
@@ -51,9 +53,18 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 }
 
 func (s *Server) routes() {
+	webAppFS, err := fs.Sub(web.Assets, "app")
+	if err != nil {
+		panic(err)
+	}
+	webFileServer := http.FileServer(http.FS(webAppFS))
+
+	s.mux.Handle("/", webFileServer)
+	s.mux.Handle("/play/", http.StripPrefix("/play/", webFileServer))
 	s.mux.HandleFunc("GET /healthz", s.handleHealth)
 	s.mux.HandleFunc("GET /api/v1/state", s.handleState)
 	s.mux.HandleFunc("POST /api/v1/tick", s.handleTick)
+	s.mux.HandleFunc("POST /api/v1/reset", s.handleReset)
 	s.mux.HandleFunc("POST /api/v1/stations/maintenance", s.handleMaintenance)
 	s.mux.HandleFunc("POST /api/v1/stations/load", s.handleLoad)
 	s.mux.HandleFunc("POST /api/v1/stations/prepare_reserve", s.handlePrepareReserve)
@@ -82,6 +93,14 @@ func (s *Server) handleTick(writer http.ResponseWriter, request *http.Request) {
 	defer s.mu.Unlock()
 
 	writeJSON(writer, http.StatusOK, s.sim.Advance(payload.Hours))
+}
+
+func (s *Server) handleReset(writer http.ResponseWriter, _ *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.sim = sim.NewDefaultSimulation()
+	writeJSON(writer, http.StatusOK, s.sim.Snapshot())
 }
 
 func (s *Server) handleMaintenance(writer http.ResponseWriter, request *http.Request) {

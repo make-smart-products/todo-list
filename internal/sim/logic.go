@@ -29,6 +29,7 @@ func (s *Simulation) Advance(hours int) Snapshot {
 				debtGrowth *= 1 + weather.StormSeverity*0.9
 			}
 			station.MaintenanceDebt = clamp(station.MaintenanceDebt+debtGrowth, 0, 100)
+			s.applyEquipmentWear(station, weather)
 
 			healthDrop := 0.05 + station.LoadFactor*0.12
 			if station.MaintenanceDebt > 55 {
@@ -48,26 +49,37 @@ func (s *Simulation) Advance(hours int) Snapshot {
 					station.LastEvent = "storm outage absorbed by reserve power"
 					station.MaintenanceDebt = clamp(station.MaintenanceDebt+1.1, 0, 100)
 					healthDrop += 0.12
+					s.markReserveEquipment(station, "active")
 					s.pushEvent("warning", station.Name+" transferred to reserve power during thunderstorm activity.")
 				} else {
 					station.Status = "outage"
 					station.LastEvent = "storm outage cut pumping power"
 					healthDrop += 0.45
+					s.gridOutageHours++
 					s.pushEvent("critical", station.Name+" lost external power with no ready reserve.")
 				}
 			}
 
 			station.Health = clamp(station.Health-healthDrop, 35, 100)
+			s.recalculateStationHealth(station)
 		}
 
 		s.refreshDerivedState()
 		s.totalPumped += s.deliveredThisHour
+		s.revenue += s.deliveredThisHour * 46
+		s.powerCost += currentGridLoadPowerCost(s.stations) * 0.35
+		if weather.StormSeverity > 0.74 {
+			s.stormLossCost += 900 + float64(s.gridOutageHours)*80
+		}
 
 		if s.deliveredThisHour < s.hourlyTarget*0.88 {
 			s.pushEvent("warning", "Hourly dispatch target missed. Review routing and station loading.")
+			s.penaltyCost += 1800
+			s.targetMissHours++
 		}
 		if s.reliability < 76 {
 			s.pushEvent("warning", "Reliability dropped below dispatch comfort band.")
+			s.penaltyCost += 700
 		}
 		if weather.StormSeverity > 0.74 {
 			s.pushEvent("info", "Thunderstorm peak active over the "+weather.StormFront+" corridor.")
@@ -89,7 +101,20 @@ func (s *Simulation) PerformMaintenance(stationID string) (Snapshot, error) {
 	station.ReserveReady = true
 	station.Status = "service"
 	station.LastEvent = "planned maintenance improved station readiness"
+	for index := range station.Equipment {
+		equipment := &station.Equipment[index]
+		equipment.Health = clamp(equipment.Health+8, 35, 100)
+		equipment.MaintenanceDebt = clamp(equipment.MaintenanceDebt-28, 0, 100)
+		equipment.LastServiceHoursAgo = 0
+		if equipment.Kind == "reserve" {
+			equipment.Status = "ready"
+		} else {
+			equipment.Status = "stable"
+		}
+	}
+	s.maintenanceCost += 7200
 	s.pushEvent("info", station.Name+" completed planned maintenance and reserve checks.")
+	s.recalculateStationHealth(station)
 	s.refreshDerivedState()
 
 	return s.Snapshot(), nil
@@ -110,6 +135,7 @@ func (s *Simulation) SetStationLoad(stationID string, loadFactor float64) (Snaps
 	}
 
 	s.pushEvent("info", station.Name+" dispatch load updated to "+formatPercent(station.LoadFactor)+".")
+	s.recalculateStationHealth(station)
 	s.refreshDerivedState()
 
 	return s.Snapshot(), nil
@@ -126,7 +152,10 @@ func (s *Simulation) PrepareReserve(stationID string) (Snapshot, error) {
 	station.LoadFactor = clamp(station.LoadFactor-0.03, station.MinLoadFactor, station.MaxLoadFactor)
 	station.LastEvent = "reserve power tested and marked ready"
 	station.Status = "reserve-ready"
+	s.markReserveEquipment(station, "ready")
+	s.maintenanceCost += 1800
 	s.pushEvent("info", station.Name+" reserve power train has been prepared for storm conditions.")
+	s.recalculateStationHealth(station)
 	s.refreshDerivedState()
 
 	return s.Snapshot(), nil
@@ -140,8 +169,11 @@ func (s *Simulation) SetBypassShare(share float64) Snapshot {
 }
 
 func (s *Simulation) currentWeather() WeatherState {
-	stormCycle := s.tickHours % 24
+	return s.weatherAtHour(s.tickHours)
+}
 
+func (s *Simulation) weatherAtHour(hour int) WeatherState {
+	stormCycle := hour % 24
 	severity := 0.24
 	switch {
 	case stormCycle >= 0 && stormCycle < 6:
@@ -242,7 +274,8 @@ func (s *Simulation) refreshDerivedState() {
 	s.deliveredThisHour = round2(delivered)
 	s.reliability = round2(s.calculateReliability())
 	s.serviceQuality = round2(s.calculateServiceQuality())
-	s.score = round2(s.totalPumped*0.42 + s.reliability*9 + s.serviceQuality*6)
+	netBalance := s.dispatchBudget + s.revenue - s.powerCost - s.maintenanceCost - s.stormLossCost - s.penaltyCost
+	s.score = round2(s.totalPumped*0.42 + s.reliability*9 + s.serviceQuality*6 + netBalance*0.002)
 	s.alerts = s.currentAlerts(weather)
 }
 
@@ -283,7 +316,7 @@ func (s *Simulation) calculateServiceQuality() float64 {
 }
 
 func (s *Simulation) currentAlerts(weather WeatherState) []string {
-	alerts := make([]string, 0, 8)
+	alerts := make([]string, 0, 12)
 	if weather.StormSeverity > 0.74 {
 		alerts = append(alerts, "Severe thunderstorm activity over the "+weather.StormFront+" corridor.")
 	}
@@ -292,6 +325,9 @@ func (s *Simulation) currentAlerts(weather WeatherState) []string {
 	}
 	if s.bypassShare > 0.4 {
 		alerts = append(alerts, "Southern bypass is carrying an elevated share of national flow.")
+	}
+	if s.currentEconomy().NetBalance < s.dispatchBudget*0.6 {
+		alerts = append(alerts, "Operating margin is shrinking. Maintenance and penalty costs are rising.")
 	}
 
 	for _, station := range s.stations {
@@ -305,6 +341,11 @@ func (s *Simulation) currentAlerts(weather WeatherState) []string {
 		}
 		if station.MaintenanceDebt > 55 {
 			alerts = append(alerts, station.Name+" has a critical maintenance backlog.")
+		}
+		for _, equipment := range station.Equipment {
+			if equipment.Health < 70 || equipment.MaintenanceDebt > 60 {
+				alerts = append(alerts, station.Name+": "+equipment.Name+" requires intervention.")
+			}
 		}
 	}
 
@@ -368,4 +409,96 @@ func stationPotential(station Station, weather WeatherState) float64 {
 
 func formatPercent(value float64) string {
 	return fmt.Sprintf("%.0f%%", round2(value*100))
+}
+
+func (s *Simulation) applyEquipmentWear(station *Station, weather WeatherState) {
+	for index := range station.Equipment {
+		equipment := &station.Equipment[index]
+		equipment.LastServiceHoursAgo++
+		if equipment.Kind == "reserve" {
+			if station.ReserveReady {
+				equipment.Status = "ready"
+			} else {
+				equipment.Status = "standby"
+			}
+		} else {
+			equipment.Status = "stable"
+		}
+
+		debtGrowth := 0.35 + station.LoadFactor*equipment.LoadShare*0.8
+		if equipment.Kind == "electrical" && station.Region == weather.StormFront {
+			debtGrowth += weather.StormSeverity * 0.9
+		}
+		if equipment.Kind == "reserve" && station.ReserveReady {
+			debtGrowth += 0.08
+		}
+		equipment.MaintenanceDebt = clamp(equipment.MaintenanceDebt+debtGrowth, 0, 100)
+
+		healthDrop := 0.03 + station.LoadFactor*equipment.LoadShare*0.18
+		if equipment.Kind == "electrical" && weather.StormSeverity > 0.7 && station.Region == weather.StormFront {
+			healthDrop += 0.12
+			equipment.Status = "storm-watch"
+		}
+		if equipment.MaintenanceDebt > 58 {
+			healthDrop += 0.14
+			equipment.Status = "degraded"
+		}
+
+		equipment.Health = clamp(equipment.Health-healthDrop, 35, 100)
+		equipment.PowerDraw = round2(equipment.PowerDraw * (1 + station.LoadFactor*0.001))
+	}
+}
+
+func (s *Simulation) recalculateStationHealth(station *Station) {
+	if len(station.Equipment) == 0 {
+		return
+	}
+
+	totalHealth := 0.0
+	totalDebt := 0.0
+	reserveReady := station.ReserveReady
+	for _, equipment := range station.Equipment {
+		totalHealth += equipment.Health
+		totalDebt += equipment.MaintenanceDebt
+		if equipment.Kind == "reserve" && equipment.Status != "ready" && equipment.Status != "active" {
+			reserveReady = false
+		}
+	}
+
+	station.Health = clamp(totalHealth/float64(len(station.Equipment)), 35, 100)
+	station.MaintenanceDebt = clamp(totalDebt/float64(len(station.Equipment)), 0, 100)
+	station.ReserveReady = reserveReady
+}
+
+func (s *Simulation) markReserveEquipment(station *Station, status string) {
+	for index := range station.Equipment {
+		equipment := &station.Equipment[index]
+		if equipment.Kind != "reserve" {
+			continue
+		}
+
+		equipment.Status = status
+		if status == "active" {
+			equipment.Health = clamp(equipment.Health-0.2, 35, 100)
+			equipment.MaintenanceDebt = clamp(equipment.MaintenanceDebt+0.8, 0, 100)
+		}
+		if status == "ready" {
+			equipment.LastServiceHoursAgo = 0
+		}
+	}
+}
+
+func currentGridLoadPowerCost(stations []Station) float64 {
+	total := 0.0
+	for _, station := range stations {
+		for _, equipment := range station.Equipment {
+			draw := equipment.PowerDraw
+			if equipment.Kind == "reserve" && station.ReserveActive {
+				draw *= 1.3
+			}
+			total += draw * station.LoadFactor
+		}
+	}
+
+	return round2(total)
 }
