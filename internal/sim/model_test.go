@@ -20,8 +20,8 @@ func TestAdvanceIncreasesThroughputAndTracksStormSeason(t *testing.T) {
 		t.Fatalf("expected thunderstorm season, got %q", after.Weather.Season)
 	}
 
-	if len(after.Alerts) == 0 {
-		t.Fatal("expected active alerts after advancing the simulation")
+	if len(after.EventLog) == 0 {
+		t.Fatal("expected event log entries after advancing the simulation")
 	}
 }
 
