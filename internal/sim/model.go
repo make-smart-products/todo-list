@@ -7,27 +7,41 @@ import (
 )
 
 type Station struct {
-	ID                string  `json:"id"`
-	Name              string  `json:"name"`
-	Region            string  `json:"region"`
-	PumpCapacity      float64 `json:"pump_capacity"`
-	LoadFactor        float64 `json:"load_factor"`
-	Health            float64 `json:"health"`
-	MaintenanceDebt   float64 `json:"maintenance_debt"`
-	GridOnline        bool    `json:"grid_online"`
-	ReserveReady      bool    `json:"reserve_ready"`
-	ReserveActive     bool    `json:"reserve_active"`
-	LightningExposure float64 `json:"lightning_exposure"`
-	LastEvent         string  `json:"last_event"`
+	ID                  string  `json:"id"`
+	Name                string  `json:"name"`
+	Region              string  `json:"region"`
+	Role                string  `json:"role"`
+	PumpCapacity        float64 `json:"pump_capacity"`
+	LoadFactor          float64 `json:"load_factor"`
+	MinLoadFactor       float64 `json:"min_load_factor"`
+	MaxLoadFactor       float64 `json:"max_load_factor"`
+	Health              float64 `json:"health"`
+	MaintenanceDebt     float64 `json:"maintenance_debt"`
+	GridOnline          bool    `json:"grid_online"`
+	ReserveReady        bool    `json:"reserve_ready"`
+	ReserveActive       bool    `json:"reserve_active"`
+	LightningExposure   float64 `json:"lightning_exposure"`
+	EffectiveThroughput float64 `json:"effective_throughput"`
+	Status              string  `json:"status"`
+	LastEvent           string  `json:"last_event"`
 }
 
 type Segment struct {
 	ID          string  `json:"id"`
+	Name        string  `json:"name"`
 	FromStation string  `json:"from_station"`
 	ToStation   string  `json:"to_station"`
 	Capacity    float64 `json:"capacity"`
+	Flow        float64 `json:"flow"`
 	Utilization float64 `json:"utilization"`
 	StormRisk   float64 `json:"storm_risk"`
+	Status      string  `json:"status"`
+}
+
+type Event struct {
+	TickHours int    `json:"tick_hours"`
+	Severity  string `json:"severity"`
+	Message   string `json:"message"`
 }
 
 type WeatherState struct {
@@ -39,253 +53,172 @@ type WeatherState struct {
 }
 
 type Snapshot struct {
-	TickHours        int          `json:"tick_hours"`
-	TotalPumped      float64      `json:"total_pumped"`
-	HourlyThroughput float64      `json:"hourly_throughput"`
-	PlanTarget       float64      `json:"plan_target"`
-	Reliability      float64      `json:"reliability"`
-	Weather          WeatherState `json:"weather"`
-	Stations         []Station    `json:"stations"`
-	Segments         []Segment    `json:"segments"`
+	ScenarioName      string       `json:"scenario_name"`
+	TickHours         int          `json:"tick_hours"`
+	TotalPumped       float64      `json:"total_pumped"`
+	DeliveredThisHour float64      `json:"delivered_this_hour"`
+	HourlyTarget      float64      `json:"hourly_target"`
+	PlanTarget        float64      `json:"plan_target"`
+	PlanProgress      float64      `json:"plan_progress"`
+	Reliability       float64      `json:"reliability"`
+	ServiceQuality    float64      `json:"service_quality"`
+	Score             float64      `json:"score"`
+	BypassShare       float64      `json:"bypass_share"`
+	Weather           WeatherState `json:"weather"`
+	Stations          []Station    `json:"stations"`
+	Segments          []Segment    `json:"segments"`
+	Alerts            []string     `json:"alerts"`
+	EventLog          []Event      `json:"event_log"`
 }
 
 type Simulation struct {
-	tickHours   int
-	totalPumped float64
-	planTarget  float64
-	stations    []Station
-	segments    []Segment
+	scenarioName      string
+	tickHours         int
+	totalPumped       float64
+	deliveredThisHour float64
+	planTarget        float64
+	hourlyTarget      float64
+	bypassShare       float64
+	reliability       float64
+	serviceQuality    float64
+	score             float64
+	stations          []Station
+	segments          []Segment
+	alerts            []string
+	eventLog          []Event
 }
 
 func NewDefaultSimulation() *Simulation {
 	simulation := &Simulation{
-		planTarget: 3800,
+		scenarioName: "Thunderstorm Dispatch Week",
+		planTarget:   6200,
+		hourlyTarget: 255,
+		bypassShare:  0.22,
 		stations: []Station{
 			{
-				ID:                "nps-west-1",
+				ID:                "nps-north-intake",
+				Name:              "North Intake",
+				Region:            "north",
+				Role:              "source",
+				PumpCapacity:      320,
+				LoadFactor:        0.82,
+				MinLoadFactor:     0.55,
+				MaxLoadFactor:     1.05,
+				Health:            93,
+				MaintenanceDebt:   12,
+				GridOnline:        true,
+				ReserveReady:      true,
+				LightningExposure: 0.45,
+				Status:            "stable",
+			},
+			{
+				ID:                "nps-west-booster",
 				Name:              "West Booster",
 				Region:            "west",
-				PumpCapacity:      420,
+				Role:              "source",
+				PumpCapacity:      430,
 				LoadFactor:        0.78,
-				Health:            91,
+				MinLoadFactor:     0.55,
+				MaxLoadFactor:     1.05,
+				Health:            90,
+				MaintenanceDebt:   20,
+				GridOnline:        true,
+				ReserveReady:      true,
+				LightningExposure: 0.58,
+				Status:            "stable",
+			},
+			{
+				ID:                "nps-central-hub",
+				Name:              "Central Hub",
+				Region:            "central",
+				Role:              "hub",
+				PumpCapacity:      620,
+				LoadFactor:        0.84,
+				MinLoadFactor:     0.60,
+				MaxLoadFactor:     1.05,
+				Health:            89,
+				MaintenanceDebt:   26,
+				GridOnline:        true,
+				ReserveReady:      true,
+				LightningExposure: 0.70,
+				Status:            "stable",
+			},
+			{
+				ID:                "nps-south-loop",
+				Name:              "South Loop",
+				Region:            "south",
+				Role:              "bypass",
+				PumpCapacity:      280,
+				LoadFactor:        0.70,
+				MinLoadFactor:     0.55,
+				MaxLoadFactor:     0.98,
+				Health:            87,
+				MaintenanceDebt:   22,
+				GridOnline:        true,
+				ReserveReady:      false,
+				LightningExposure: 0.82,
+				Status:            "stable",
+			},
+			{
+				ID:                "nps-east-export",
+				Name:              "East Export",
+				Region:            "east",
+				Role:              "terminal",
+				PumpCapacity:      540,
+				LoadFactor:        0.88,
+				MinLoadFactor:     0.60,
+				MaxLoadFactor:     1.02,
+				Health:            92,
 				MaintenanceDebt:   18,
 				GridOnline:        true,
 				ReserveReady:      true,
-				LightningExposure: 0.55,
-			},
-			{
-				ID:                "nps-central-2",
-				Name:              "Central Hub",
-				Region:            "central",
-				PumpCapacity:      610,
-				LoadFactor:        0.82,
-				Health:            88,
-				MaintenanceDebt:   24,
-				GridOnline:        true,
-				ReserveReady:      true,
-				LightningExposure: 0.72,
-			},
-			{
-				ID:                "nps-east-3",
-				Name:              "East Transit",
-				Region:            "east",
-				PumpCapacity:      500,
-				LoadFactor:        0.75,
-				Health:            86,
-				MaintenanceDebt:   27,
-				GridOnline:        true,
-				ReserveReady:      false,
-				LightningExposure: 0.9,
+				LightningExposure: 0.65,
+				Status:            "stable",
 			},
 		},
 		segments: []Segment{
-			{ID: "seg-west-central", FromStation: "nps-west-1", ToStation: "nps-central-2", Capacity: 380, StormRisk: 0.42},
-			{ID: "seg-central-east", FromStation: "nps-central-2", ToStation: "nps-east-3", Capacity: 340, StormRisk: 0.68},
+			{ID: "seg-north-central", Name: "North-Central Mainline", FromStation: "nps-north-intake", ToStation: "nps-central-hub", Capacity: 300, StormRisk: 0.35},
+			{ID: "seg-west-central", Name: "West-Central Mainline", FromStation: "nps-west-booster", ToStation: "nps-central-hub", Capacity: 360, StormRisk: 0.42},
+			{ID: "seg-central-east", Name: "Central-East Mainline", FromStation: "nps-central-hub", ToStation: "nps-east-export", Capacity: 420, StormRisk: 0.58},
+			{ID: "seg-central-south", Name: "Central-South Bypass", FromStation: "nps-central-hub", ToStation: "nps-south-loop", Capacity: 240, StormRisk: 0.64},
+			{ID: "seg-south-east", Name: "South-East Export Loop", FromStation: "nps-south-loop", ToStation: "nps-east-export", Capacity: 230, StormRisk: 0.71},
 		},
 	}
 
-	simulation.updateSegments(simulation.currentWeather())
+	simulation.pushEvent("info", "Dispatch shift started. Country-wide pumping plan loaded.")
+	simulation.refreshDerivedState()
 	return simulation
 }
 
 func (s *Simulation) Snapshot() Snapshot {
-	stations := cloneStationsForSnapshot(s.stations)
-	segments := slices.Clone(s.segments)
-	weather := s.currentWeather()
-
 	return Snapshot{
-		TickHours:        s.tickHours,
-		TotalPumped:      round2(s.totalPumped),
-		HourlyThroughput: round2(s.hourlyThroughput(weather)),
-		PlanTarget:       s.planTarget,
-		Reliability:      round2(s.reliabilityScore()),
-		Weather:          weather,
-		Stations:         stations,
-		Segments:         segments,
+		ScenarioName:      s.scenarioName,
+		TickHours:         s.tickHours,
+		TotalPumped:       round2(s.totalPumped),
+		DeliveredThisHour: round2(s.deliveredThisHour),
+		HourlyTarget:      round2(s.hourlyTarget),
+		PlanTarget:        round2(s.planTarget),
+		PlanProgress:      round2(clamp(s.totalPumped/s.planTarget, 0, 2)),
+		Reliability:       round2(s.reliability),
+		ServiceQuality:    round2(s.serviceQuality),
+		Score:             round2(s.score),
+		BypassShare:       round2(s.bypassShare),
+		Weather:           s.currentWeather(),
+		Stations:          cloneStationsForSnapshot(s.stations),
+		Segments:          cloneSegmentsForSnapshot(s.segments),
+		Alerts:            slices.Clone(s.alerts),
+		EventLog:          slices.Clone(s.eventLog),
 	}
 }
 
-func (s *Simulation) Advance(hours int) Snapshot {
-	if hours < 1 {
-		hours = 1
-	}
-
-	for range hours {
-		s.tickHours++
-		weather := s.currentWeather()
-
-		for index := range s.stations {
-			station := &s.stations[index]
-			station.ReserveActive = false
-			station.GridOnline = true
-			station.LastEvent = "stable operations"
-
-			debtGrowth := 0.6 * station.LoadFactor * (1 + weather.StormSeverity*0.6)
-			if station.Region == weather.StormFront {
-				debtGrowth *= 1.4
-			}
-			station.MaintenanceDebt = math.Min(100, station.MaintenanceDebt+debtGrowth)
-
-			healthDrop := 0.12 * station.LoadFactor
-			if station.MaintenanceDebt > 55 {
-				healthDrop += 0.25
-			}
-
-			outageTriggered := weather.StormSeverity > 0.72 &&
-				station.Region == weather.StormFront &&
-				station.LightningExposure > 0.65
-
-			if outageTriggered {
-				station.GridOnline = false
-				if station.ReserveReady {
-					station.ReserveActive = true
-					station.LastEvent = "grid outage, reserve power started"
-					station.MaintenanceDebt = math.Min(100, station.MaintenanceDebt+1.2)
-					healthDrop += 0.2
-				} else {
-					station.LastEvent = "grid outage, station throughput collapsed"
-					healthDrop += 0.6
-				}
-			}
-
-			station.Health = math.Max(35, station.Health-healthDrop)
-		}
-
-		s.updateSegments(weather)
-		s.totalPumped += s.hourlyThroughput(weather)
-	}
-
-	return s.Snapshot()
-}
-
-func (s *Simulation) PerformMaintenance(stationID string) (Station, error) {
-	for index := range s.stations {
-		station := &s.stations[index]
-		if station.ID != stationID {
-			continue
-		}
-
-		station.MaintenanceDebt = math.Max(0, station.MaintenanceDebt-28)
-		station.Health = math.Min(100, station.Health+6)
-		station.ReserveReady = true
-		station.LastEvent = "planned maintenance completed"
-
-		s.updateSegments(s.currentWeather())
-		return *station, nil
-	}
-
-	return Station{}, fmt.Errorf("station %q not found", stationID)
-}
-
-func (s *Simulation) currentWeather() WeatherState {
-	stormCycle := s.tickHours % 24
-
-	severity := 0.2
-	switch {
-	case stormCycle >= 0 && stormCycle < 6:
-		severity = 0.22
-	case stormCycle >= 6 && stormCycle < 12:
-		severity = 0.46
-	case stormCycle >= 12 && stormCycle < 16:
-		severity = 0.84
-	case stormCycle >= 16 && stormCycle < 20:
-		severity = 0.78
-	default:
-		severity = 0.58
-	}
-
-	front := "west"
-	switch {
-	case stormCycle >= 8 && stormCycle < 16:
-		front = "central"
-	case stormCycle >= 16:
-		front = "east"
-	}
-
-	advisory := "Normal pumping window."
-	if severity > 0.7 {
-		advisory = "Thunderstorm season peak: keep reserve power available."
-	} else if severity > 0.4 {
-		advisory = "Storm cells are building, review maintenance queues."
-	}
-
-	return WeatherState{
-		Season:             "thunderstorm",
-		StormFront:         front,
-		StormSeverity:      round2(severity),
-		GridOutageRisk:     round2(severity * 0.9),
-		OperationsAdvisory: advisory,
-	}
-}
-
-func (s *Simulation) hourlyThroughput(weather WeatherState) float64 {
-	total := 0.0
-	for _, station := range s.stations {
-		efficiency := station.Health / 100
-		if station.MaintenanceDebt > 45 {
-			efficiency *= 0.92
-		}
-
-		load := station.PumpCapacity * station.LoadFactor
-		switch {
-		case !station.GridOnline && station.ReserveActive:
-			load *= 0.7
-		case !station.GridOnline:
-			load = 0
-		}
-
-		if station.Region == weather.StormFront {
-			load *= 1 - weather.StormSeverity*0.08
-		}
-
-		total += load * efficiency
-	}
-
-	return round2(total / float64(len(s.stations)))
-}
-
-func (s *Simulation) reliabilityScore() float64 {
-	total := 0.0
-	for _, station := range s.stations {
-		score := station.Health - station.MaintenanceDebt*0.35
-		if !station.GridOnline && !station.ReserveActive {
-			score -= 8
-		}
-		total += score
-	}
-
-	return math.Max(0, total/float64(len(s.stations)))
-}
-
-func (s *Simulation) updateSegments(weather WeatherState) {
-	throughput := s.hourlyThroughput(weather)
-	for index := range s.segments {
-		segment := &s.segments[index]
-		utilization := throughput / segment.Capacity
-		if segment.ToStation == "nps-east-3" && weather.StormFront == "east" {
-			utilization *= 0.88
-		}
-		segment.Utilization = round2(math.Min(1.2, utilization))
+func (s *Simulation) pushEvent(severity, message string) {
+	s.eventLog = append(s.eventLog, Event{
+		TickHours: s.tickHours,
+		Severity:  severity,
+		Message:   message,
+	})
+	if len(s.eventLog) > 12 {
+		s.eventLog = slices.Clone(s.eventLog[len(s.eventLog)-12:])
 	}
 }
 
@@ -293,15 +226,63 @@ func round2(value float64) float64 {
 	return math.Round(value*100) / 100
 }
 
+func clamp(value, minValue, maxValue float64) float64 {
+	return math.Max(minValue, math.Min(maxValue, value))
+}
+
 func cloneStationsForSnapshot(stations []Station) []Station {
 	cloned := slices.Clone(stations)
 	for index := range cloned {
-		cloned[index].Health = round2(cloned[index].Health)
-		cloned[index].MaintenanceDebt = round2(cloned[index].MaintenanceDebt)
 		cloned[index].PumpCapacity = round2(cloned[index].PumpCapacity)
 		cloned[index].LoadFactor = round2(cloned[index].LoadFactor)
+		cloned[index].MinLoadFactor = round2(cloned[index].MinLoadFactor)
+		cloned[index].MaxLoadFactor = round2(cloned[index].MaxLoadFactor)
+		cloned[index].Health = round2(cloned[index].Health)
+		cloned[index].MaintenanceDebt = round2(cloned[index].MaintenanceDebt)
 		cloned[index].LightningExposure = round2(cloned[index].LightningExposure)
+		cloned[index].EffectiveThroughput = round2(cloned[index].EffectiveThroughput)
 	}
 
 	return cloned
+}
+
+func cloneSegmentsForSnapshot(segments []Segment) []Segment {
+	cloned := slices.Clone(segments)
+	for index := range cloned {
+		cloned[index].Capacity = round2(cloned[index].Capacity)
+		cloned[index].Flow = round2(cloned[index].Flow)
+		cloned[index].Utilization = round2(cloned[index].Utilization)
+		cloned[index].StormRisk = round2(cloned[index].StormRisk)
+	}
+
+	return cloned
+}
+
+func (s *Simulation) stationByID(stationID string) (*Station, error) {
+	for index := range s.stations {
+		if s.stations[index].ID == stationID {
+			return &s.stations[index], nil
+		}
+	}
+
+	return nil, fmt.Errorf("station %q not found", stationID)
+}
+
+func (s *Simulation) stationByIDMust(stationID string) *Station {
+	station, err := s.stationByID(stationID)
+	if err != nil {
+		panic(err)
+	}
+
+	return station
+}
+
+func (s *Simulation) segmentByIDMust(segmentID string) *Segment {
+	for index := range s.segments {
+		if s.segments[index].ID == segmentID {
+			return &s.segments[index]
+		}
+	}
+
+	panic(fmt.Sprintf("segment %q not found", segmentID))
 }

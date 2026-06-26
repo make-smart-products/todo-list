@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1_t2xwu"]
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/map_canvas.gd" id="2_map"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -9,7 +10,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_t2xwu")
+script = ExtResource("1_main")
 
 [node name="HTTPRequest" type="HTTPRequest" parent="."]
 
@@ -27,14 +28,14 @@ theme_override_constants/margin_bottom = 24
 
 [node name="VBox" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 16
 
 [node name="TitleLabel" type="Label" parent="MarginContainer/VBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "Oil Worker Dispatch Prototype"
 
-[node name="StatusLabel" type="Label" parent="MarginContainer/VBox"]
+[node name="SummaryLabel" type="Label" parent="MarginContainer/VBox"]
 layout_mode = 2
 autowrap_mode = 3
 text = "Waiting for backend..."
@@ -56,12 +57,119 @@ text = "Refresh state"
 layout_mode = 2
 text = "Advance 1 hour"
 
-[node name="MaintenanceButton" type="Button" parent="MarginContainer/VBox/ButtonsRow"]
+[node name="TickSixButton" type="Button" parent="MarginContainer/VBox/ButtonsRow"]
 layout_mode = 2
-text = "Maintain East Transit"
+text = "Advance 6 hours"
 
-[node name="StationsLabel" type="Label" parent="MarginContainer/VBox"]
+[node name="MainSplit" type="HSplitContainer" parent="MarginContainer/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = 760
+
+[node name="MapPanel" type="PanelContainer" parent="MarginContainer/VBox/MainSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MapVBox" type="VBoxContainer" parent="MarginContainer/VBox/MainSplit/MapPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="MapHeaderLabel" type="Label" parent="MarginContainer/VBox/MainSplit/MapPanel/MapVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "National trunk pipeline map"
+
+[node name="MapCanvas" type="Control" parent="MarginContainer/VBox/MainSplit/MapPanel/MapVBox"]
+custom_minimum_size = Vector2(720, 420)
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("2_map")
+
+[node name="SegmentLabel" type="Label" parent="MarginContainer/VBox/MainSplit/MapPanel/MapVBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "Segment status will appear here."
+
+[node name="Sidebar" type="PanelContainer" parent="MarginContainer/VBox/MainSplit"]
+layout_mode = 2
+custom_minimum_size = Vector2(360, 0)
+
+[node name="SidebarVBox" type="VBoxContainer" parent="MarginContainer/VBox/MainSplit/Sidebar"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SelectedStationLabel" type="Label" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "No station selected"
+
+[node name="StationDetailsLabel" type="Label" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "Station details will appear here."
+
+[node name="LoadValueLabel" type="Label" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox"]
+layout_mode = 2
+text = "Station load setpoint: 70%"
+
+[node name="LoadSlider" type="HSlider" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox"]
+layout_mode = 2
+min_value = 55.0
+max_value = 105.0
+value = 78.0
+step = 1.0
+
+[node name="ActionButtonsRow" type="HBoxContainer" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ApplyLoadButton" type="Button" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox/ActionButtonsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Apply load"
+
+[node name="MaintenanceButton" type="Button" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox/ActionButtonsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Maintenance"
+
+[node name="ReserveButton" type="Button" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox/ActionButtonsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Prepare reserve"
+
+[node name="BypassValueLabel" type="Label" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox"]
+layout_mode = 2
+text = "Southern bypass share: 22%"
+
+[node name="BypassSlider" type="HSlider" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox"]
+layout_mode = 2
+min_value = 5.0
+max_value = 55.0
+value = 22.0
+step = 1.0
+
+[node name="ApplyBypassButton" type="Button" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox"]
+layout_mode = 2
+text = "Apply bypass routing"
+
+[node name="AlertsHeaderLabel" type="Label" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Active alerts"
+
+[node name="AlertsLabel" type="Label" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "No active alerts."
+
+[node name="EventHeaderLabel" type="Label" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Event log"
+
+[node name="EventLogLabel" type="Label" parent="MarginContainer/VBox/MainSplit/Sidebar/SidebarVBox"]
 layout_mode = 2
 size_flags_vertical = 3
 autowrap_mode = 3
-text = "Station status will appear here."
+text = "No events logged yet."

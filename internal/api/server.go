@@ -23,6 +23,19 @@ type maintenanceRequest struct {
 	StationID string `json:"station_id"`
 }
 
+type loadRequest struct {
+	StationID  string  `json:"station_id"`
+	LoadFactor float64 `json:"load_factor"`
+}
+
+type reserveRequest struct {
+	StationID string `json:"station_id"`
+}
+
+type bypassRequest struct {
+	Share float64 `json:"share"`
+}
+
 func NewServer(simulation *sim.Simulation) *Server {
 	server := &Server{
 		sim: simulation,
@@ -42,6 +55,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/state", s.handleState)
 	s.mux.HandleFunc("POST /api/v1/tick", s.handleTick)
 	s.mux.HandleFunc("POST /api/v1/stations/maintenance", s.handleMaintenance)
+	s.mux.HandleFunc("POST /api/v1/stations/load", s.handleLoad)
+	s.mux.HandleFunc("POST /api/v1/stations/prepare_reserve", s.handlePrepareReserve)
+	s.mux.HandleFunc("POST /api/v1/network/bypass_share", s.handleBypassShare)
 }
 
 func (s *Server) handleHealth(writer http.ResponseWriter, _ *http.Request) {
@@ -78,13 +94,64 @@ func (s *Server) handleMaintenance(writer http.ResponseWriter, request *http.Req
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	station, err := s.sim.PerformMaintenance(payload.StationID)
+	snapshot, err := s.sim.PerformMaintenance(payload.StationID)
 	if err != nil {
 		writeJSON(writer, http.StatusNotFound, map[string]string{"error": err.Error()})
 		return
 	}
 
-	writeJSON(writer, http.StatusOK, station)
+	writeJSON(writer, http.StatusOK, snapshot)
+}
+
+func (s *Server) handleLoad(writer http.ResponseWriter, request *http.Request) {
+	var payload loadRequest
+	if err := decodeJSON(request, &payload); err != nil {
+		writeJSON(writer, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	snapshot, err := s.sim.SetStationLoad(payload.StationID, payload.LoadFactor)
+	if err != nil {
+		writeJSON(writer, http.StatusNotFound, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(writer, http.StatusOK, snapshot)
+}
+
+func (s *Server) handlePrepareReserve(writer http.ResponseWriter, request *http.Request) {
+	var payload reserveRequest
+	if err := decodeJSON(request, &payload); err != nil {
+		writeJSON(writer, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	snapshot, err := s.sim.PrepareReserve(payload.StationID)
+	if err != nil {
+		writeJSON(writer, http.StatusNotFound, map[string]string{"error": err.Error()})
+		return
+	}
+
+	writeJSON(writer, http.StatusOK, snapshot)
+}
+
+func (s *Server) handleBypassShare(writer http.ResponseWriter, request *http.Request) {
+	var payload bypassRequest
+	if err := decodeJSON(request, &payload); err != nil {
+		writeJSON(writer, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	writeJSON(writer, http.StatusOK, s.sim.SetBypassShare(payload.Share))
 }
 
 func decodeJSON(request *http.Request, destination any) error {

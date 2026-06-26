@@ -49,14 +49,20 @@ The Godot layer owns:
 
 The first integration step uses a local HTTP API.
 
-### Initial endpoints
+### Current endpoints
 
 - `GET /api/v1/state`
-  - returns the current snapshot of the network, stations, and weather
+  - returns the current snapshot of the network, stations, weather, alerts, and event log
 - `POST /api/v1/tick`
   - advances the simulation by a given number of hours
 - `POST /api/v1/stations/maintenance`
   - applies maintenance to a single station
+- `POST /api/v1/stations/load`
+  - updates a station dispatch setpoint
+- `POST /api/v1/stations/prepare_reserve`
+  - prepares reserve power before the next storm cell arrives
+- `POST /api/v1/network/bypass_share`
+  - reroutes a larger or smaller percentage of national flow through the southern bypass
 
 This API-first split keeps the domain logic independent from the Godot scene graph and makes the simulation easy to test without the game client.
 
@@ -90,6 +96,8 @@ If performance or packaging later becomes a concern, the architecture can evolve
 - model reserve power tests and failures,
 - add maintenance queues and scheduled service windows,
 - introduce scoring by throughput, reliability, and outages.
+
+The repository is now partially through this milestone: the prototype has branching routes, scenario scoring, and a clickable station map, but still needs deeper planning mechanics and richer visual widgets.
 
 ### Milestone 3
 

@@ -19,19 +19,23 @@ func TestAdvanceIncreasesThroughputAndTracksStormSeason(t *testing.T) {
 	if after.Weather.Season != "thunderstorm" {
 		t.Fatalf("expected thunderstorm season, got %q", after.Weather.Season)
 	}
+
+	if len(after.Alerts) == 0 {
+		t.Fatal("expected active alerts after advancing the simulation")
+	}
 }
 
 func TestMaintenanceImprovesStationCondition(t *testing.T) {
 	simulation := NewDefaultSimulation()
 	before := simulation.Snapshot()
 
-	targetBefore := before.Stations[2]
+	targetBefore := before.Stations[3]
 	if _, err := simulation.PerformMaintenance(targetBefore.ID); err != nil {
 		t.Fatalf("maintenance failed: %v", err)
 	}
 
 	after := simulation.Snapshot()
-	targetAfter := after.Stations[2]
+	targetAfter := findStation(t, after, targetBefore.ID)
 
 	if targetAfter.MaintenanceDebt >= targetBefore.MaintenanceDebt {
 		t.Fatalf("expected maintenance debt to decrease, before %.2f after %.2f", targetBefore.MaintenanceDebt, targetAfter.MaintenanceDebt)
@@ -40,29 +44,86 @@ func TestMaintenanceImprovesStationCondition(t *testing.T) {
 	if targetAfter.Health <= targetBefore.Health {
 		t.Fatalf("expected health to improve, before %.2f after %.2f", targetBefore.Health, targetAfter.Health)
 	}
+
+	if !targetAfter.ReserveReady {
+		t.Fatal("expected maintenance to make reserve power ready")
+	}
 }
 
-func TestStormOutageWithoutReserveDisablesStation(t *testing.T) {
+func TestSetStationLoadUpdatesDispatchSetpoint(t *testing.T) {
 	simulation := NewDefaultSimulation()
-	simulation.tickHours = 15
 
-	after := simulation.Advance(1)
-
-	for _, station := range after.Stations {
-		if station.ID != "nps-east-3" {
-			continue
-		}
-
-		if station.GridOnline {
-			t.Fatalf("expected east station grid to be offline during storm")
-		}
-
-		if station.ReserveActive {
-			t.Fatalf("expected east station reserve to remain inactive")
-		}
-
-		return
+	before := findStation(t, simulation.Snapshot(), "nps-west-booster")
+	after, err := simulation.SetStationLoad("nps-west-booster", 1.2)
+	if err != nil {
+		t.Fatalf("set station load failed: %v", err)
 	}
 
-	t.Fatal("expected to find east station in snapshot")
+	station := findStation(t, after, "nps-west-booster")
+	if station.LoadFactor <= before.LoadFactor {
+		t.Fatalf("expected load factor to increase, before %.2f after %.2f", before.LoadFactor, station.LoadFactor)
+	}
+
+	if station.LoadFactor != station.MaxLoadFactor {
+		t.Fatalf("expected load factor to clamp to max %.2f, got %.2f", station.MaxLoadFactor, station.LoadFactor)
+	}
+}
+
+func TestBypassShareRedirectsFlow(t *testing.T) {
+	simulation := NewDefaultSimulation()
+
+	before := simulation.Snapshot()
+	beforeFlow := findSegment(t, before, "seg-central-south").Flow
+
+	after := simulation.SetBypassShare(0.5)
+	afterFlow := findSegment(t, after, "seg-central-south").Flow
+
+	if after.BypassShare <= before.BypassShare {
+		t.Fatalf("expected bypass share to increase, before %.2f after %.2f", before.BypassShare, after.BypassShare)
+	}
+
+	if afterFlow <= beforeFlow {
+		t.Fatalf("expected southern bypass flow to grow, before %.2f after %.2f", beforeFlow, afterFlow)
+	}
+}
+
+func TestPrepareReserveProtectsSouthLoopDuringStorm(t *testing.T) {
+	simulation := NewDefaultSimulation()
+	if _, err := simulation.PrepareReserve("nps-south-loop"); err != nil {
+		t.Fatalf("prepare reserve failed: %v", err)
+	}
+
+	simulation.tickHours = 11
+	after := simulation.Advance(1)
+	south := findStation(t, after, "nps-south-loop")
+
+	if !south.ReserveActive {
+		t.Fatal("expected south loop to switch to reserve during southern storm peak")
+	}
+}
+
+func findStation(t *testing.T, snapshot Snapshot, stationID string) Station {
+	t.Helper()
+
+	for _, station := range snapshot.Stations {
+		if station.ID == stationID {
+			return station
+		}
+	}
+
+	t.Fatalf("station %s not found", stationID)
+	return Station{}
+}
+
+func findSegment(t *testing.T, snapshot Snapshot, segmentID string) Segment {
+	t.Helper()
+
+	for _, segment := range snapshot.Segments {
+		if segment.ID == segmentID {
+			return segment
+		}
+	}
+
+	t.Fatalf("segment %s not found", segmentID)
+	return Segment{}
 }
