@@ -1,0 +1,67 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_t2xwu"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_t2xwu")
+
+[node name="HTTPRequest" type="HTTPRequest" parent="."]
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Oil Worker Dispatch Prototype"
+
+[node name="StatusLabel" type="Label" parent="MarginContainer/VBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "Waiting for backend..."
+
+[node name="WeatherLabel" type="Label" parent="MarginContainer/VBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = "Weather state will appear here."
+
+[node name="ButtonsRow" type="HBoxContainer" parent="MarginContainer/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="RefreshButton" type="Button" parent="MarginContainer/VBox/ButtonsRow"]
+layout_mode = 2
+text = "Refresh state"
+
+[node name="TickButton" type="Button" parent="MarginContainer/VBox/ButtonsRow"]
+layout_mode = 2
+text = "Advance 1 hour"
+
+[node name="MaintenanceButton" type="Button" parent="MarginContainer/VBox/ButtonsRow"]
+layout_mode = 2
+text = "Maintain East Transit"
+
+[node name="StationsLabel" type="Label" parent="MarginContainer/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+autowrap_mode = 3
+text = "Station status will appear here."
